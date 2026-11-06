@@ -1,2 +1,0 @@
-import { CheckCircle2, XCircle } from 'lucide-react'
-export function Toast({ message, type = 'success' }: { message: string; type?: 'success' | 'error' }) { return <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold shadow-xl ${type === 'success' ? 'bg-espresso text-white' : 'bg-red-700 text-white'}`}>{type === 'success' ? <CheckCircle2 size={18}/> : <XCircle size={18}/>} {message}</div> }

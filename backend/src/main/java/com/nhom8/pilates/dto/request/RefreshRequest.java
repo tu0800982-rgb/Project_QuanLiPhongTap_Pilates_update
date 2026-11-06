@@ -1,0 +1,11 @@
+package com.nhom8.pilates.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+
+public class RefreshRequest {
+    @NotBlank(message = "Refresh token không được để trống")
+    private String refreshToken;
+    public RefreshRequest() { }
+    public String getRefreshToken(){return refreshToken;}
+    public void setRefreshToken(String refreshToken){this.refreshToken=refreshToken;}
+}
