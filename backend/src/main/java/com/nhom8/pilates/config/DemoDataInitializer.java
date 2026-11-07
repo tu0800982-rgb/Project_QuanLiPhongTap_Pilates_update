@@ -34,13 +34,14 @@ public class DemoDataInitializer implements CommandLineRunner {
     @Override @Transactional
     public void run(String... args) {
         Map<RoleCode,Role> roleMap=createRoles();
-        User admin=createUser("admin@pilates.com","Quản trị viên",roleMap.get(RoleCode.ADMIN));
-        User staff=createUser("staff@pilates.com","Nhân viên Studio",roleMap.get(RoleCode.STAFF));
-        User trainerUser=createUser("trainer@pilates.com","Nguyễn Minh Trainer",roleMap.get(RoleCode.TRAINER));
+        User admin=createUser("admin@pilates.com","Vũ Thành Đạt",roleMap.get(RoleCode.ADMIN));
+        User staff=createUser("staff@pilates.com","Phạm Thu Hà",roleMap.get(RoleCode.STAFF));
+        User trainerUser=createUser("trainer@pilates.com","Nguyễn Minh Khang",roleMap.get(RoleCode.TRAINER));
         User memberUser=createUser("member@pilates.com","Trần An Member",roleMap.get(RoleCode.MEMBER));
         createEmployee(admin,"AD001","0900000001",EmployeeType.ADMIN,null);
         createEmployee(staff,"ST001","0900000002",EmployeeType.STAFF,null);
         createEmployee(trainerUser,"TR001","0900000003",EmployeeType.TRAINER,"Reformer Pilates, Pilates nền tảng");
+        normalizeExistingEmployeeNames();
         createMember(memberUser);createCatalog();createLinkedData(staff,trainerUser,memberUser);
     }
 
@@ -54,15 +55,42 @@ public class DemoDataInitializer implements CommandLineRunner {
     }
 
     private User createUser(String email,String name,Role role) {
-        return users.findByEmailIgnoreCase(email).orElseGet(() -> {
-            User user=new User();user.setEmail(email);user.setFullName(name);
-            user.setPasswordHash(passwordEncoder.encode("123456"));user.setRole(role);
-            user.setStatus(AccountStatus.ACTIVE);return users.save(user);
+        User user=users.findByEmailIgnoreCase(email).orElseGet(() -> {
+            User created=new User();created.setEmail(email);created.setFullName(name);
+            created.setPasswordHash(passwordEncoder.encode("123456"));created.setRole(role);
+            created.setStatus(AccountStatus.ACTIVE);return users.save(created);
         });
+        if(isPlaceholderName(user.getFullName())) {
+            user.setFullName(name);users.save(user);
+        }
+        return user;
+    }
+
+    private boolean isPlaceholderName(String name) {
+        return name!=null&&Set.of("Quản trị viên","Nhân viên Studio","Nguyễn Minh Trainer").contains(name.trim());
+    }
+
+    private void normalizeExistingEmployeeNames() {
+        Map<String,String> replacements=Map.of(
+                "Quản trị viên","Vũ Thành Đạt",
+                "Nhân viên Studio","Phạm Thu Hà",
+                "Nguyễn Minh Trainer","Nguyễn Minh Khang",
+                "CODEX","Đỗ Gia Huy");
+        for(Employee item:employees.findAll()) {
+            String replacement=replacements.get(item.getFullName()==null?null:item.getFullName().trim());
+            if(replacement==null)continue;
+            item.setFullName(replacement);item.getUser().setFullName(replacement);
+            users.save(item.getUser());employees.save(item);
+        }
     }
 
     private void createEmployee(User user,String code,String phone,EmployeeType type,String specialization) {
-        if(employees.findByUserId(user.getId()).isPresent())return;
+        Optional<Employee> existing=employees.findByUserId(user.getId());
+        if(existing.isPresent()) {
+            Employee item=existing.get();
+            if(isPlaceholderName(item.getFullName())) {item.setFullName(user.getFullName());employees.save(item);}
+            return;
+        }
         Employee item=new Employee();item.setUser(user);item.setEmployeeCode(code);item.setFullName(user.getFullName());
         item.setPhone(phone);item.setEmployeeType(type);item.setSpecialization(specialization);
         item.setBiography(type==EmployeeType.TRAINER?"Huấn luyện viên demo của Pilates Studio – Nhóm 8.":null);
